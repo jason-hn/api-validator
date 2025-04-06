@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Comparison Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .json-input {
+      flex: 1;
+    }
+    textarea {
+      width: 100%;
+      height: 250px;
+      font-family: monospace;
+      padding: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #results {
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .diff-category {
+      margin-bottom: 10px;
+    }
+    .diff-category h3 {
+      margin-bottom: 5px;
+      color: #333;
+    }
+    .diff-list {
+      list-style-type: none;
+      padding-left: 0;
+      margin: 0;
+    }
+    .added {
+      color: green;
+    }
+    .removed {
+      color: red;
+    }
+    .modified {
+      color: orange;
+    }
+  </style>
+</head>
+<body>
+  <h1>JSON Comparison Tool</h1>
+  
+  <div class="container">
+    <div class="json-input">
+      <h2>First JSON</h2>
+      <textarea id="json1"></textarea>
+    </div>
+    <div class="json-input">
+      <h2>Second JSON</h2>
+      <textarea id="json2"></textarea>
+    </div>
+  </div>
+  
+  <button id="compareBtn">Compare</button>
+  
+  <h2>Differences</h2>
+  <div id="results">
+    <p>Click the compare button to see differences.</p>
+  </div>
+
+  <script>
+    // JSON comparison function
+    function compareJSON(obj1, obj2) {
+      const added = [];
+      const removed = [];
+      const modified = [];
+      
+      function compare(obj1, obj2, path = '') {
+        // Check for keys in obj2 that are not in obj1 (added)
+        for (const key in obj2) {
+          const currentPath = path ? `${path}.${key}` : key;
+          
+          if (!(key in obj1)) {
+            added.push(currentPath);
+            continue;
+          }
+          
+          // Both objects have this key - check if values are different
+          if (typeof obj2[key] === 'object' && obj2[key] !== null && 
+              typeof obj1[key] === 'object' && obj1[key] !== null) {
+            // Recursively compare nested objects
+            compare(obj1[key], obj2[key], currentPath);
+          } else if (JSON.stringify(obj1[key]) !== JSON.stringify(obj2[key])) {
+            modified.push(currentPath);
+          }
+        }
+        
+        // Check for keys in obj1 that are not in obj2 (removed)
+        for (const key in obj1) {
+          const currentPath = path ? `${path}.${key}` : key;
+          if (!(key in obj2)) {
+            removed.push(currentPath);
+          }
+        }
+      }
+      
+      compare(obj1, obj2);
+      
+      return {
+        added,
+        removed,
+        modified
+      };
+    }
+
+    // Sample data
+    const obj1 = {
+      name: "John",
+      age: 30,
+      address: {
+        city: "New York",
+        zip: 10001
+      },
+      hobbies: ["reading", "gaming"]
+    };
+
+    const obj2 = {
+      name: "John",
+      age: 31,
+      address: {
+        city: "Boston",
+        zip: 10001,
+        street: "Main St"
+      },
+      interests: ["coding"]
+    };
+
+    // Initialize textareas with sample data
+    document.getElementById('json1').value = JSON.stringify(obj1, null, 2);
+    document.getElementById('json2').value = JSON.stringify(obj2, null, 2);
+
+    // Compare button click handler
+    document.getElementById('compareBtn').addEventListener('click', function() {
+      try {
+        const json1 = JSON.parse(document.getElementById('json1').value);
+        const json2 = JSON.parse(document.getElementById('json2').value);
+        
+        const differences = compareJSON(json1, json2);
+        
+        // Display results
+        let resultsHTML = '';
+        
+        // Added keys
+        resultsHTML += '<div class="diff-category">';
+        resultsHTML += '<h3>Added Fields:</h3>';
+        if (differences.added.length > 0) {
+          resultsHTML += '<ul class="diff-list">';
+          differences.added.forEach(path => {
+            resultsHTML += `<li class="added">+ ${path}</li>`;
+          });
+          resultsHTML += '</ul>';
+        } else {
+          resultsHTML += '<p>No keys added.</p>';
+        }
+        resultsHTML += '</div>';
+        
+        // Removed keys
+        resultsHTML += '<div class="diff-category">';
+        resultsHTML += '<h3>Removed Fields:</h3>';
+        if (differences.removed.length > 0) {
+          resultsHTML += '<ul class="diff-list">';
+          differences.removed.forEach(path => {
+            resultsHTML += `<li class="removed">- ${path}</li>`;
+          });
+          resultsHTML += '</ul>';
+        } else {
+          resultsHTML += '<p>No keys removed.</p>';
+        }
+        resultsHTML += '</div>';
+        
+        // Modified keys
+        resultsHTML += '<div class="diff-category">';
+        resultsHTML += '<h3>Modified Fields:</h3>';
+        if (differences.modified.length > 0) {
+          resultsHTML += '<ul class="diff-list">';
+          differences.modified.forEach(path => {
+            resultsHTML += `<li class="modified">~ ${path}</li>`;
+          });
+          resultsHTML += '</ul>';
+        } else {
+          resultsHTML += '<p>No keys modified.</p>';
+        }
+        resultsHTML += '</div>';
+        
+        document.getElementById('results').innerHTML = resultsHTML;
+      } catch (error) {
+        document.getElementById('results').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>
